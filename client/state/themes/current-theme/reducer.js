@@ -2,6 +2,7 @@
  * External dependencies
  */
 import { fromJS } from 'immutable';
+import { FROM_OBJECT } from 'state/action-types';
 
 /**
  * Internal dependencies
@@ -31,6 +32,8 @@ export default ( state = initialState, action ) => {
 				.setIn( [ 'currentThemes', action.site.ID ], action.theme );
 		case ActionTypes.CLEAR_ACTIVATED_THEME:
 			return state.set( 'hasActivated', false );
+		case FROM_OBJECT:
+			return initialState;
 	}
 	return state;
 };
