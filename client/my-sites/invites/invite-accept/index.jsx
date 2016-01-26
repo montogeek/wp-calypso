@@ -159,11 +159,16 @@ let InviteAccept = React.createClass( {
 	renderNoticeAction() {
 		const { user, invite } = this.state;
 
-		if ( ! user ) {
+		if ( ! user && ! invite.knownUser ) {
 			return;
 		}
 
-		let props;
+		let props,
+			actionText = this.translate( 'Switch Accounts' );
+
+		if ( ! user ) {
+			actionText = this.translate( 'Sign In' );
+		}
 
 		if ( invite.knownUser ) {
 			props = { href: this.signInLink() };
@@ -173,18 +178,18 @@ let InviteAccept = React.createClass( {
 
 		return (
 			<NoticeAction { ... props } >
-				{ this.translate( 'Switch Accounts' ) }
+				{ actionText }
 			</NoticeAction>
 		);
 	},
 
 	render() {
 		const classes = classNames( 'invite-accept', { 'is-error': !! this.isInvalidInvite() } ),
-			{ invite, matchEmailError } = this.state;
+			{ invite, matchEmailError, user } = this.state;
 
 		return (
 			<div className={ classes }>
-				{ matchEmailError &&
+				{ matchEmailError && user &&
 					<Notice
 						text={ this.translate( 'This invite is only valid for %(email)s.', { args: { email: invite.sentTo } } ) }
 						status="is-error"
