@@ -3,6 +3,7 @@
  */
 var React = require( 'react' ),
 	classNames = require( 'classnames' );
+import { isEmpty } from 'lodash/lang';
 
 /**
  * Internal dependencies
@@ -10,8 +11,6 @@ var React = require( 'react' ),
 var toggle = require( '../mixin-toggle' ),
 	Geochart = require( '../geochart' ),
 	StatsList = require( '../stats-list' ),
-	observe = require( 'lib/mixins/data-observe' ),
-	skeleton = require( '../mixin-skeleton' ),
 	DownloadCsv = require( '../stats-download-csv' ),
 	DatePicker = require( '../stats-date-picker' ),
 	ErrorPanel = require( '../stats-error' ),
@@ -23,23 +22,14 @@ var toggle = require( '../mixin-toggle' ),
 module.exports = React.createClass( {
 	displayName: 'StatCountries',
 
-	mixins: [ toggle( 'Countries' ), skeleton( 'data' ), observe( 'dataList' ) ],
-
-	data: function( nextProps ) {
-		var props = nextProps || this.props;
-
-		return props.dataList.response.data;
-	},
-
-	getInitialState: function() {
-		return { noData: this.props.dataList.isEmpty() };
-	},
-
-	componentWillReceiveProps: function( nextProps ) {
-		this.setState( { noData: nextProps.dataList.isEmpty() } );
-	},
+	mixins: [ toggle( 'Countries' ) ],
 
 	render: function() {
+		const moduleState = this.props.moduleState.statsCountryViews;
+		const moduleStateData = moduleState.response && ! isEmpty( moduleState.response.data )
+			? moduleState.response.data
+			: [];
+
 		var countries,
 			mapData = [
 				[
@@ -47,11 +37,10 @@ module.exports = React.createClass( {
 					this.translate( 'Views' ).toString()
 				]
 			],
-			data = this.data(),
-			hasError = this.props.dataList.isError(),
-			noData = this.props.dataList.isEmpty(),
+hasError = false, // @TODO -- was this.props.dataList.isError()
+			noData = isEmpty( moduleStateData ),
 			infoIcon = this.state.showInfo ? 'info' : 'info-outline',
-			isLoading = this.props.dataList.isLoading(),
+			isLoading = moduleState.isLoading,
 			moduleHeaderTitle,
 			summaryPageLink,
 			viewSummary,
@@ -73,7 +62,7 @@ module.exports = React.createClass( {
 		];
 
 		// Loop countries and build array for geochart
-		data.forEach( function( country ) {
+		moduleStateData.forEach( function( country ) {
 			mapData.push( [ country.label, country.value ] );
 		} );
 
@@ -91,7 +80,7 @@ module.exports = React.createClass( {
 				</li>
 			);
 
-			if ( this.props.dataList.response.viewAll ) {
+			if ( moduleState.response && moduleState.response.viewAll ) {
 				viewSummary = (
 					<div key="view-all" className="module-expand">
 						<a href={ summaryPageLink }>{ this.translate( 'View All', { context: 'Stats: Button label to expand a panel' } ) }<span className="right"></span></a>
@@ -102,9 +91,8 @@ module.exports = React.createClass( {
 			moduleHeaderTitle = <DatePicker period={ this.props.period.period } date={ this.props.period.startOf } summary={ true } />;
 		}
 
-		geochart = <Geochart data={ mapData } dataList={ this.props.dataList } />;
-
-		countries = <StatsList moduleName={ this.props.path } data={ data } />;
+		geochart = <Geochart data={ mapData } moduleState={ moduleState } />;
+		countries = <StatsList moduleName={ this.props.path } data={ moduleStateData } />;
 
 		return (
 			<Card className={ classNames.apply( null, classes ) }>
@@ -135,8 +123,11 @@ module.exports = React.createClass( {
 						<StatsModulePlaceholder isLoading={ isLoading } />
 						{ countries }
 						{ this.props.summary
-							? <DownloadCsv period={ this.props.period } path={ this.props.path } site={ this.props.site } dataList={ this.props.dataList } />
-							: null }
+							? <DownloadCsv period={ this.props.period } path={ this.props.path } site={ this.props.site } moduleState={ moduleState } />
+							: null
+
+							// @TODO !!!
+						}
 						{ hasError ? <ErrorPanel className={ 'network-error' } /> : null }
 					</div>
 					{ viewSummary }

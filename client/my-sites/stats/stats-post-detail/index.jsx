@@ -8,7 +8,6 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-//import observe from 'lib/mixins/data-observe';
 import Emojify from 'components/emojify';
 import SummaryChart from '../stats-summary-chart';
 import PostMonths from '../stats-detail-months';
@@ -118,7 +117,7 @@ export default connect(
 			}
 		};
 		const statsItem = getStatsItem( state, params );
-		const isFetching = isStatsItemFetching( state, params )
+		const isFetching = isStatsItemFetching( state, params );
 
 		return {
 			statsItem,

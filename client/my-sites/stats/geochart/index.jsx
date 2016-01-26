@@ -18,8 +18,7 @@ module.exports = React.createClass( {
 	visualization: null,
 
 	propTypes: {
-		data: React.PropTypes.array.isRequired,
-		dataList: React.PropTypes.object.isRequired
+		data: React.PropTypes.array.isRequired
 	},
 
 	recordEvent: function() {
@@ -59,7 +58,7 @@ module.exports = React.createClass( {
 					colorAxis: { colors: [ '#FFF088', '#F34605' ] }
 				};
 
-			this.props.dataList.response.data.map( function( country ) {
+			this.props.data.map( function( country ) {
 				if ( -1 === regionCodes.indexOf( country.region ) ) {
 					regionCodes.push( country.region );
 				}

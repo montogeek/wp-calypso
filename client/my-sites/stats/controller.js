@@ -18,6 +18,7 @@ var user = require( 'lib/user' )(),
 	analyticsPageTitle = 'Stats',
 	layoutFocus = require( 'lib/layout-focus' ),
 	titleActions = require( 'lib/screen-title/actions' );
+import { createFetchActionsForModule } from 'state/stats/actions';
 
 function getVisitDates() {
 	var statsVisitDates = store.get( 'statVisits' ) || [];
@@ -523,20 +524,20 @@ module.exports = {
 
 	summary: function( context, next ) {
 		var site,
-			siteId = context.params.site_id,
+			siteID = context.params.site_id,
 			siteFragment = route.getSiteFragment( context.path ),
 			queryOptions = context.query,
 			StatsList = require( 'lib/stats/stats-list' ),
 			FollowList = require( 'lib/follow-list' ),
 			StatsSummaryComponent = require( 'my-sites/stats/summary' ),
-			filters = function( contextModule, siteId ) {
+			filters = function( contextModule, siteID ) {
 				return [
-					{ title: i18n.translate( 'Days' ), path: '/stats/' + contextModule + '/' + siteId, altPaths: [ '/stats/day/' + contextModule + '/' + siteId ], id: 'stats-day', period: 'day', back: '/stats/' + siteId },
-					{ title: i18n.translate( 'Weeks' ), path: '/stats/week/' + contextModule + '/' + siteId, id: 'stats-week', period: 'week', back: '/stats/week/' + siteId },
-					{ title: i18n.translate( 'Months' ), path: '/stats/month/' + contextModule + '/' + siteId, id: 'stats-month', period: 'month', back: '/stats/month/' + siteId },
-					{ title: i18n.translate( 'Years' ), path: '/stats/year/' + contextModule + '/' + siteId, id: 'stats-year', period: 'year', back: '/stats/year/' + siteId }
+					{ title: i18n.translate( 'Days' ), path: '/stats/' + contextModule + '/' + siteID, altPaths: [ '/stats/day/' + contextModule + '/' + siteID ], id: 'stats-day', period: 'day', back: '/stats/' + siteID },
+					{ title: i18n.translate( 'Weeks' ), path: '/stats/week/' + contextModule + '/' + siteID, id: 'stats-week', period: 'week', back: '/stats/week/' + siteID },
+					{ title: i18n.translate( 'Months' ), path: '/stats/month/' + contextModule + '/' + siteID, id: 'stats-month', period: 'month', back: '/stats/month/' + siteID },
+					{ title: i18n.translate( 'Years' ), path: '/stats/year/' + contextModule + '/' + siteID, id: 'stats-year', period: 'year', back: '/stats/year/' + siteID }
 				];
-			}.bind( null, context.params.module, siteId ),
+			}.bind( null, context.params.module, siteID ),
 			activeFilter = false,
 			date,
 			endDate,
@@ -548,18 +549,18 @@ module.exports = {
 			momentSiteZone = i18n.moment(),
 			basePath = route.sectionify( context.path );
 
-		site = sites.getSite( siteId );
+		site = sites.getSite( siteID );
 		if ( ! site ) {
-			site = sites.getSite( parseInt( siteId, 10 ) );
+			site = sites.getSite( parseInt( siteID, 10 ) );
 		}
-		siteId = site ? ( site.ID || 0 ) : 0;
+		siteID = site ? ( site.ID || 0 ) : 0;
 
 		activeFilter = filters().filter( function( filter ) {
 			return context.pathname === filter.path || ( filter.altPaths && -1 !== filter.altPaths.indexOf( context.pathname ) );
 		}, this );
 
 		// if we have a siteFragment, but no siteId, wait for the sites list
-		if ( siteFragment && 0 === siteId ) {
+		if ( siteFragment && 0 === siteID ) {
 			if ( 0 === sites.data.length ) {
 				sites.once( 'change', function() {
 					page( context.path );
@@ -583,41 +584,26 @@ module.exports = {
 			period = rangeOfPeriod( activeFilter.period, date );
 			endDate = period.endOf.format( 'YYYY-MM-DD' );
 
-			switch ( context.params.module ) {
-
+			const module = context.params.module;
+			let fetchActions;
+			switch ( module ) {
 				case 'posts':
-					visitsList = new StatsList( { statType: 'statsVisits', unit: activeFilter.period, siteID: siteId, quantity: 10, date: endDate } );
-					summaryList = new StatsList( { statType: 'statsTopPosts', siteID: siteId, period: activeFilter.period, date: endDate, max: 0 } );
+					fetchActions = [
+						{ statType: 'statsVisits', options: {
+							unit: activeFilter.period, quantity: 10, date: endDate
+						} },
+						{ statType: 'statsTopPosts', options: {
+							period: activeFilter.period,
+							date: endDate,
+							max: 0
+						} }
+					];
 					break;
-
-				case 'referrers':
-					summaryList = new StatsList( { siteID: siteId, statType: 'statsReferrers', period: activeFilter.period, date: endDate, max: 0 } );
-					break;
-
-				case 'clicks':
-					summaryList = new StatsList( { statType: 'statsClicks', siteID: siteId, period: activeFilter.period, date: endDate, max: 0 } );
-					break;
-
-				case 'countryviews':
-					summaryList = new StatsList( { siteID: siteId, statType: 'statsCountryViews', period: activeFilter.period, date: endDate, max: 0 } );
-					break;
-
-				case 'authors':
-					summaryList = new StatsList( { statType: 'statsTopAuthors', siteID: siteId, period: activeFilter.period, date: endDate, max: 0 } );
-					break;
-
-				case 'videoplays':
-					summaryList = new StatsList( { statType: 'statsVideoPlays', siteID: siteId, period: activeFilter.period, date: endDate, max: 0 } );
-					break;
-
 				case 'videodetails':
-					summaryList = new StatsList( { statType: 'statsVideo', post: queryOptions.post, siteID: siteId, period: activeFilter.period, date: endDate, max: 0 } );
+					fetchActions = createFetchActionsForModule( module, activeFilter, endDate, { post: queryOptions.post } );
 					break;
-
-				case 'searchterms':
-					summaryList = new StatsList( { siteID: siteId, statType: 'statsSearchTerms', period: activeFilter.period, date: endDate, max: 0 } );
-					break;
-
+				default:
+					fetchActions = createFetchActionsForModule( module, activeFilter, endDate );
 			}
 
 			analytics.pageView.record(
@@ -625,18 +611,22 @@ module.exports = {
 				analyticsPageTitle + ' > ' + titlecase( activeFilter.period ) + ' > ' + titlecase( context.params.module )
 			);
 
+			const querystring = context.querystring;
+
 			renderWithReduxStore(
 				React.createElement( StatsSummaryComponent, {
-					date: date,
-					context: context,
-					path: context.pathname,
-					sites: sites,
-					filters: filters,
-					summaryList: summaryList,
-					visitsList: visitsList,
+					date,
+					fetchActions,
+					filters,
+					module,
+					querystring,
+					sites,
+					siteID,
+					domain: siteFragment,
 					followList: followList,
-					siteId: siteId,
-					period: period
+					period: period,
+					path: context.pathname,
+					visitsList: visitsList
 				} ),
 				document.getElementById( 'primary' ),
 				context.store
